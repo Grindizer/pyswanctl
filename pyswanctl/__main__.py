@@ -20,9 +20,11 @@ mapp_g = {
 }
 
 mapp_l = {
-    'i': {'c': 'initiate', 'd': '{ noblock = <use non-blocking mode if key is set> '
-                                '  ike = <filter listed IKE_SAs by its name>'
-                                '  ike-id = <filter listed IKE_SA by its unique id>'
+    'i': {'c': 'initiate', 'd': '{ child = <CHILD_SA configuration name to initiate> '
+                                '  ike = <optional IKE_SA configuraiton name to find child under>'
+                                '  timeout = <timeout in ms before returning>'
+                                '  init-limits = <whether limits may prevent initiating the CHILD_SA>'
+                                '  loglevel = <loglevel to issue "control-log" events for>'
                                 '}',
           },
     't': {'c': 'terminate', 'd': '{'
@@ -48,6 +50,14 @@ mapp_l = {
                                 '  ike = <filter listed IKE_SAs by its name>'
                                 '  ike-id = <filter listed IKE_SA by its unique id>'
                                 '}'
+          },
+    'L': {'c': 'list_conns', 'd': '{'
+                                  'ike = <list connections matching a given configuration name only>'
+                                  '}'
+          },
+    'd': {'c': 'unload_conn', 'd': '{'
+                                   'name = <IKE_SA config name>'
+                                   '}'
           },
     'P': {'c': 'list_policies', 'd': '{'
                                      '  drop = <set to yes to list drop policies>'
@@ -84,6 +94,8 @@ def get(ctx, cmd):
     ipsec_s = ctx.obj['ipsec_s']
     ret = getattr(ipsec_s, mapp_g[cmd])()
     if ret:
+        if type(ret).__name__ == 'generator':
+            ret = list(ret)
         click.echo(json.dumps(ret))
     else:
         click.echo(ret)
@@ -97,6 +109,8 @@ def do(ctx, cmd, option):
     ipsec_s = ctx.obj['ipsec_s']
     ret = getattr(ipsec_s, mapp_l[cmd]['c'])(dict(option))
     if ret:
+        if type(ret).__name__ == 'generator':
+            ret = list(ret)
         click.echo(json.dumps(ret))
     else:
         click.echo(ret)
@@ -111,7 +125,7 @@ def watch(ctx, event, hook):
     ipsec_s = ctx.obj['ipsec_s']
     handlers = []
     for name in hook:
-        handlers = handlers + list(iter_entry_points('vici.events.hook', name))
+        handlers += list(iter_entry_points('vici.events.hook', name))
 
     signal.signal(signal.SIGINT, terminating)
     while True:
@@ -128,10 +142,26 @@ def watch(ctx, event, hook):
                 click.echo("Error was: '{0}'".format(something))
 
 
+@cli.command('update')
+@click.pass_context
+def update(ctx):
+    ipsec_s = ctx.obj['ipsec_s']
+    loaded = set(sum([lc.values()[0]['children'].keys() for lc in ipsec_s.list_conns()], []))
+    initiated = set(sum([ic.values()[0]['child-sas'].keys() for ic in ipsec_s.list_sas()], []))
+    to_update = list(loaded - initiated)
+    for missing_connection in to_update:
+        do_init = list(ipsec_s.initiate(dict(child=missing_connection, timeout=-1)))
+    click.echo(json.dumps(dict(updated=to_update)))
+
+
 def terminating(signal, frame):
     click.echo("Stopping event watch ")
     sys.exit(0)
 
 
+def entry():
+    return cli(obj={})
+
+
 if __name__ == '__main__':
-    cli(obj={})
+    entry()
