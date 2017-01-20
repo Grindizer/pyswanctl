@@ -84,13 +84,13 @@ class WatchExec(Command):
     swancmd = 'listen'
 
     def get_parser(self, prog_name):
-        parser = super(Command, self).get_parser(prog_name)
+        parser = super(WatchExec, self).get_parser(prog_name)
         parser.add_argument('--watch', '-w',
-                            chices=['ike-updown', 'ike-rekey', 'child-updown', 'child-rekey'],
+                            choices=['ike-updown', 'ike-rekey', 'child-updown', 'child-rekey'],
                             required=True, dest='event_name',
                             help='Name of the event to register to')
 
-        parser.add_argument('--exec', '--cb', '-e', nargs='+', type=list, dest='handlers',
+        parser.add_argument('--exec', '--cb', '-e', nargs='+', type=str, dest='handlers',
                             help='name of the callback to run when the event is triggered. '
                                  '(name of a python entry point under "pyswanctl.event_handler")')
         return parser

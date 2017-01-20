@@ -63,8 +63,8 @@ def list_ctx_default(results):
                         ','.join(child_pts['remote-ts']),
                         child_pts['mode'],
                         c_name,
-                        ','.join(child_pts['local_addrs']),
-                        ','.join(child_pts['remote_addrs']),
+                        ','.join(c_pts['local_addrs']),
+                        ','.join(c_pts['remote_addrs']),
                     ]
 
     yield _iter_results()

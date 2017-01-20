@@ -6,6 +6,7 @@ import signal
 import logging
 from multiprocessing import Process
 from collections import defaultdict
+import inspect
 
 
 class PySwanCtl(object):
@@ -16,10 +17,13 @@ class PySwanCtl(object):
         vici_sock = socket.socket(socket.AF_UNIX)
         vici_sock.connect(sock)
         self.ipsec_s = vici.Session(vici_sock)
+        self.sock = sock
         self.watchers = []
 
     def make_call(self, api, **args):
         api_func = getattr(self.ipsec_s, api)
+        if not args:
+	    return api_func()
         return api_func(args)
 
     def iter_call(self, api, **args):
@@ -65,7 +69,7 @@ class WatcherProcess(Process):
             try:
                 pyhandler = handler.load()
                 kwargs = dict(events=events, event_type=event_type)
-                if 'log' in inspect.getargspec(pyhandler.__call__).args:
+                if 'log' in inspect.getargspec(pyhandler).args:
                     kwargs['log'] = self.log
                 pyhandler(**kwargs)
             except ImportError as error:
