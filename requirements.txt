@@ -1,4 +1,7 @@
+boto3
+botocore
 cliff
 click
 pytest
 vici
+epdb

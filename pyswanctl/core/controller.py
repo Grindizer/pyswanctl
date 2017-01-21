@@ -23,7 +23,7 @@ class PySwanCtl(object):
     def make_call(self, api, **args):
         api_func = getattr(self.ipsec_s, api)
         if not args:
-	    return api_func()
+            return api_func()
         return api_func(args)
 
     def iter_call(self, api, **args):
@@ -36,16 +36,15 @@ class PySwanCtl(object):
 
     def watch(self, event_name, entry_point_names=None, group_name='pyswanctl.event_handler', detach=False):
         entry_point_names = entry_point_names or [None]
-        watcher = WatcherProcess(self.sock, event_name, entry_point_names, group_name)
-        watcher.start()
-        return watcher
+        watcher = Watcher(self.sock, event_name, entry_point_names, group_name)
+        return watcher.run()
 
 
-class WatcherProcess(Process):
+class Watcher(object):
     log = logging.getLogger(__name__)
 
     def __init__(self, sock, event_name, entry_point_names, group_name):
-        super(WatcherProcess, self).__init__()
+        super(Watcher, self).__init__()
         self.sock = sock
         self.event_name = event_name
         self.entry_points = entry_point_names
@@ -71,7 +70,7 @@ class WatcherProcess(Process):
                 kwargs = dict(events=events, event_type=event_type)
                 if 'log' in inspect.getargspec(pyhandler).args:
                     kwargs['log'] = self.log
-                pyhandler(**kwargs)
+                return pyhandler(**kwargs)
             except ImportError as error:
                 self.log.error("Was not able to load the hook '{0}' -> skipping".format(str(handler)))
                 self.log.exception(error)
@@ -83,19 +82,12 @@ class WatcherProcess(Process):
         vici = self.get_session().handler
         self.handlers = self.get_handlers()
         vici._register_unregister(self.event_name, True)
-        run = True
+        return self.watch(vici)
 
-        def on_sigint(sig, frame):
-            global run
-            self._register_unregister(self.event_type, False)
-            vici.transport.close()
-            run = False
-
-        signal.signal(signal.SIGINT, on_sigint)
-
-        while run:
+    def watch(self, vici):
+        while True:
             response = Packet.parse(vici.transport.receive())
             if response.response_type == Packet.EVENT:
                 event_type = response.event_type
                 events = Message.deserialize(response.payload)
-                self.on_event_received(event_type, events)
+                yield self.on_event_received(event_type, events)

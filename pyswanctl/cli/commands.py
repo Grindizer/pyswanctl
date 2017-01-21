@@ -78,7 +78,7 @@ class GetVersion(SwanCtlBase, ShowOne):
     swancmd = 'version'
 
 
-class WatchExec(Command):
+class WatchExec(Lister):
     """ Run a specific callback when an event is triggered """
 
     swancmd = 'listen'
@@ -98,7 +98,14 @@ class WatchExec(Command):
     def take_action(self, parsed_args):
         # add a try catch for generic errors here.
         response = self.app.ctl.watch(parsed_args.event_name, parsed_args.handlers)
-        return response.ident
+        first = response.next()
+
+        def all_values():
+            yield first.values()
+            for r in response:
+                yield r.values()
+
+        return first.keys(), all_values()
 
 
 __all__ = [
