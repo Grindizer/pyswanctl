@@ -5,6 +5,7 @@ import time
 import threading
 import json
 
+
 class CWLogger(object):
     def __init__(self, group, stream, region, create):
         self.group = group
@@ -37,9 +38,9 @@ class CWLogger(object):
                                               [
                                                   {
                                                       "timestamp": int(time.time() * 1000),
-                                                      "message": json.dumps(log)
+                                                      "message": json.dumps(logs)
                                                   }
-                                                  for log in logs],
+                                              ],
                                               **st)
 
         self.seq_token = response['nextSequenceToken']
@@ -88,7 +89,7 @@ class CWlogs(Command):
 def send_swan_event(swanctl, cwlog, lock):
     for event in swanctl.watch('child-updown', ['awslog']):
         with lock:
-            cwlog.publish(event)
+            cwlog.publish(dict(child_updown=event))
 
 
 def send_stats_event(swanctl, cwlog, delay, lock):
@@ -104,5 +105,5 @@ def send_stats_event(swanctl, cwlog, delay, lock):
                     logs.append(stats)
         if logs:
             with lock:
-                cwlog.publish(logs)
+                cwlog.publish(dict(stats=logs))
         time.sleep(delay)

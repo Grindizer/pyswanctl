@@ -33,10 +33,10 @@ class PySwanCLI(App):
             self.LOG.debug('got an error: %s', err)
 
 
-def main(argv=sys.argv[1:]):
+def main():
     pyswancli = PySwanCLI()
-    return pyswancli.run(argv)
+    return pyswancli.run(sys.argv[1:])
 
 
 if __name__ == '__main__':
-    sys.exit(main(sys.argv[1:]))
+    sys.exit(main())

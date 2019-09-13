@@ -2,11 +2,10 @@ import socket
 from pkg_resources import iter_entry_points
 import vici
 from vici.protocol import Packet, Message
-import signal
 import logging
-from multiprocessing import Process
 from collections import defaultdict
 import inspect
+import signal
 
 
 class PySwanCtl(object):

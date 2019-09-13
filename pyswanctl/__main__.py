@@ -149,9 +149,12 @@ def update(ctx):
     loaded = set(sum([lc.values()[0]['children'].keys() for lc in ipsec_s.list_conns()], []))
     initiated = set(sum([ic.values()[0]['child-sas'].keys() for ic in ipsec_s.list_sas()], []))
     to_update = list(loaded - initiated)
+    to_terminate = list(initiated - loaded)
     for missing_connection in to_update:
         do_init = list(ipsec_s.initiate(dict(child=missing_connection, timeout=-1)))
-    click.echo(json.dumps(dict(updated=to_update)))
+    for deleted_connection in to_terminate:
+        do_del = list(ipsec_s.terminate(dict(child=deleted_connection, timeout=-1)))
+    click.echo(json.dumps(dict(updated=to_update, terminated=to_terminate)))
 
 
 def terminating(signal, frame):
